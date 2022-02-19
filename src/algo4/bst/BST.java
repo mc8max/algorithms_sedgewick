@@ -1,10 +1,12 @@
 package algo4.bst;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.Stack;
 
 public class BST<Key extends Comparable<Key>, Value> {
 	public static final int RANK_NOT_FOUND = -1;
@@ -316,6 +318,33 @@ public class BST<Key extends Comparable<Key>, Value> {
 	public Iterable<Key> keys(Key low, Key high) {
 		Queue<Key> queue = new LinkedList<>();
 		keys(root, queue, low, high);
+		return queue;
+	}
+	
+	public Iterable<Key> keysNonRecursive() {
+		if (root == null) {
+			return Collections.emptyList();
+		}
+		
+		Stack<Node> stack = new Stack<>();
+		
+		Node node = root;
+		while (node != null) {
+			stack.add(node);
+			node = node.left;
+		}
+		
+		Queue<Key> queue = new LinkedList<>();
+		while (!stack.isEmpty()) {
+			node = stack.pop();
+			queue.add(node.key);
+			node = node.right;
+			while (node != null) {
+				stack.add(node);
+				node = node.left;
+			}
+		}
+		
 		return queue;
 	}
 	
