@@ -1,0 +1,445 @@
+package algo4.bst;
+
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.Set;
+
+public class BST<Key extends Comparable<Key>, Value> {
+	public static final int RANK_NOT_FOUND = -1;
+
+	private Node root;
+	private Node cache;
+
+	public class Node {
+		private Key key;
+		private Value value;
+		private Node left;
+		private Node right;
+		private int size;
+
+		public Node(Key key, Value value, int size) {
+			this.key = key;
+			this.value = value;
+			this.size = size;
+		}
+		
+		static boolean isBinaryTree(Node n) {
+			if (n == null) {
+				return true;
+			}
+			
+			int size = 1;
+			if (n.left != null) {
+				size += n.left.size;
+			}
+			
+			if (n.right != null) {
+				size += n.right.size;
+			}
+			
+			if (n.size != size) {
+				return false;
+			}
+			
+			return isBinaryTree(n.left) && isBinaryTree(n.right); 
+		}
+	}
+
+	public int size() {
+		return size(root);
+	}
+
+	protected int size(Node n) {
+		return n == null ? 0 : n.size;
+	}
+	
+	public boolean contains(Key key) {
+		Optional<Node> cache = checkCache(key);
+		return cache.isEmpty() ? (get(key) != null) : true;
+	}
+ 
+	public Value get(Key key) {
+		Optional<Node> cache = checkCache(key);
+		return cache.isEmpty() ? get(key, root) : cache.get().value;
+	}
+
+	protected Value get(Key key, Node node) {
+		if (node == null) {
+			return null;
+		}
+
+		int cmp = key.compareTo(node.key);
+		if (cmp == 0) {
+			setCache(node);
+			return node.value;
+		} else if (cmp < 0) {
+			return get(key, node.left);
+		} else {
+			return get(key, node.right);
+		}
+	}
+
+	public void put(Key key, Value value) {
+		Optional<Node> cache = checkCache(key);
+		if (cache.isEmpty()) {
+			root = put(key, value, root);
+		}
+		else {
+			cache.get().value = value;
+		}
+	}
+
+	protected Node put(Key key, Value value, Node node) {
+		if (node == null) {
+			return new Node(key, value, 1);
+		}
+
+		int cmp = key.compareTo(node.key);
+		if (cmp == 0) {
+			setCache(node);
+			node.value = value;
+		} else if (cmp < 0) {
+			node.left = put(key, value, node.left);
+		} else {
+			node.right = put(key, value, node.right);
+		}
+
+		node.size = size(node.left) + size(node.right) + 1;
+		return node;
+	}
+
+	public Key min() {
+		Node minNode = min(root);
+		return minNode == null ? null : minNode.key;
+	}
+
+	protected Node min(Node node) {
+		if (node == null) {
+			return null;
+		}
+		Node curr = node;
+		while (curr.left != null) {
+			curr = curr.left;
+		}
+		return curr;
+	}
+
+	public Key max() {
+		Node maxNode = max(root);
+		return maxNode == null ? null : maxNode.key;
+	}
+
+	protected Node max(Node node) {
+		if (node == null) {
+			return null;
+		}
+		Node curr = node;
+		while (curr.right != null) {
+			curr = curr.right;
+		}
+		return curr;
+	}
+
+	public Key floor(Key key) {
+		return floor(key, root).map(n -> n.key).orElse(null);
+	}
+
+	protected Optional<Node> floor(Key key, Node node) {
+		if (node == null) {
+			return Optional.empty();
+		}
+
+		int cmp = key.compareTo(node.key);
+		if (cmp == 0) {
+			setCache(node);
+			return Optional.of(node);
+		} else if (cmp < 0) {
+			return floor(key, node.left);
+		} else {
+			return Optional.of(floor(key, node.right).orElse(node));
+		}
+	}
+
+	public Key ceiling(Key key) {
+		return ceiling(key, root).map(n -> n.key).orElse(null);
+	}
+
+	protected Optional<Node> ceiling(Key key, Node node) {
+		if (node == null) {
+			return Optional.empty();
+		}
+
+		int cmp = key.compareTo(node.key);
+		if (cmp == 0) {
+			setCache(node);
+			return Optional.of(node);
+		} else if (cmp > 0) {
+			return ceiling(key, node.right);
+		} else {
+			return Optional.of(ceiling(key, node.left).orElse(node));
+		}
+	}
+
+	public Key select(int rank) {
+		return select(root, rank).map(n -> n.key).orElse(null);
+	}
+
+	protected Optional<Node> select(Node node, int rank) {
+		if (node == null || node.size < rank) {
+			return Optional.empty();
+		}
+		int leftRank = size(node.left);
+		if (leftRank == rank) {
+			return Optional.of(node);
+		} else if (leftRank > rank) {
+			return select(node.left, rank);
+		} else {
+			return select(node.right, rank - leftRank - 1);
+		}
+	}
+
+	public int rank(Key k) {
+		return rank(k, root);
+	}
+
+	protected int rank(Key k, Node node) {
+		if (node == null) {
+			return RANK_NOT_FOUND;
+		}
+
+		int cmp = k.compareTo(node.key);
+		if (cmp == 0) {
+			setCache(node);
+			return size(node.left);
+		} else if (cmp < 0) {
+			return rank(k, node.left);
+		}
+		int rank = rank(k, node.right);
+		if (rank != RANK_NOT_FOUND) {
+			return rank + 1 + size(node.left);
+		}
+		return RANK_NOT_FOUND;
+	}
+
+	public void deleteMin() {
+		root = deleteMin(root);
+	}
+
+	protected Node deleteMin(Node node) {
+		if (node == null) {
+			return null;
+		}
+		if (node.left == null) {
+			return node.right;
+		}
+
+		node.left = deleteMin(node.left);
+		node.size = 1 + size(node.left) + size(node.right);
+		return node;
+	}
+
+	public void deleteMax() {
+		root = deleteMax(root);
+	}
+
+	protected Node deleteMax(Node node) {
+		if (node == null) {
+			return null;
+		}
+		if (node.right == null) {
+			return node.left;
+		}
+
+		node.right = deleteMin(node.right);
+		node.size = 1 + size(node.left) + size(node.right);
+		return node;
+	}
+
+	public void delete(Key key) {
+		root = delete(key, root);
+	}
+
+	protected Node delete(Key key, Node node) {
+		if (node == null) {
+			return null;
+		}
+
+		int cmp = key.compareTo(node.key);
+		if (cmp < 0) {
+			node.left = delete(key, node.left);
+		} else if (cmp > 0) {
+			node.right = delete(key, node.right);
+		} else {
+			if (node.left == null) {
+				return node.right;
+			}
+			if (node.right == null) {
+				return node.left;
+			}
+			Node temp = node;
+			node = min(temp.right);
+			node.right = deleteMin(temp.right);
+			node.left = temp.left;
+		}
+
+		node.size = size(node.left) + size(node.right) + 1;
+		return node;
+	}
+
+	private void print(Node node) {
+		if (node == null) {
+			return;
+		}
+		
+		print(node.left);
+		System.out.print(node.key + " ");
+		print(node.right);
+	}
+	
+	public Iterable<Key> keys() {
+		return keys(min(), max());
+	}
+	
+	public Iterable<Key> keys(Key low, Key high) {
+		Queue<Key> queue = new LinkedList<>();
+		keys(root, queue, low, high);
+		return queue;
+	}
+	
+	private void keys(Node node, Queue<Key> queue, Key low, Key high) {
+		if (node == null) {
+			return;
+		}
+		
+		int cmpLow = node.key.compareTo(low);
+		int cmpHigh = node.key.compareTo(high);
+		
+		if (cmpLow > 0) {
+			keys(node.left, queue, low, high);
+		}
+		
+		if (cmpLow >= 0 && cmpHigh <= 0) {
+			queue.add(node.key);
+		}
+		
+		if (cmpHigh < 0) {
+			keys(node.right, queue, low, high);
+		}
+	}
+	
+	public int height() {
+		return height(root);
+	}
+	
+	private int height(Node node) {
+		if (node == null) {
+			return 0;
+		}
+		
+		return 1 + Math.max(height(node.left), height(node.right));
+	}
+	
+	public double avgCompares() {
+		int count = avgCompares(root, 0);
+		if (count > 0) {
+			return ((double) count) / size(root);
+		}
+		return count;
+	}
+	
+	private int avgCompares(Node node, int compares) {
+		if (node == null) {
+			return 0;
+		}
+		
+		compares++;
+		return compares + avgCompares(node.left, compares) + avgCompares(node.right, compares);
+	}
+	
+	protected boolean hasCache() {
+		return cache != null;
+	}
+	
+	protected Optional<Node> checkCache(Key key) {
+		if (hasCache()) {
+			if (cache.key.equals(key)) {
+				return Optional.of(cache);
+			}
+		}
+		clearCache();
+		return Optional.empty();
+	}
+	
+	protected void setCache(Node n) {
+		cache = n;
+	}
+	
+	protected void clearCache() {
+		cache  = null;
+	}
+	
+	public boolean orderCheck() {
+		if (root != null) {
+			return orderCheck(root, min(), max());
+		}
+		return true;
+	}
+	
+	private boolean orderCheck(Node node, Key min, Key max) {
+		if (node == null) {
+			return true;
+		}
+		
+		int cmpLeft = node.key.compareTo(min);
+		if (cmpLeft < 0) {
+			return false;
+		}
+		
+		int cmpRight = node.key.compareTo(max);
+		if (cmpRight > 0) {
+			return false;
+		}
+		
+		return orderCheck(node.left, min, max) && orderCheck(node.right, min, max);
+	}
+	
+	public boolean hasNoDuplicates() {
+		return hasNoDuplicates(root, new HashSet<Key>());
+	}
+	
+	private boolean hasNoDuplicates(Node node, Set<Key> existingKeys) {
+		if (node == null) {
+			return true;
+		}
+		
+		if (existingKeys.contains(node.key)) {
+			return false;
+		}
+		existingKeys.add(node.key);
+		return hasNoDuplicates(root.left, existingKeys) && hasNoDuplicates(root.right, existingKeys);
+	}
+	
+	public boolean isBST() {
+		if (!hasNoDuplicates()) {
+			return false;
+		}
+		if (!Node.isBinaryTree(root)) {
+			return false;
+		}
+		if (!orderCheck()) {
+			return false;
+		}
+		return true;
+	}
+	
+	public boolean checks() {
+		for (int rank = 0; rank < size(); rank++) {
+			if (rank != rank(select(rank))) {
+				return false;
+			}
+		}
+		return true;
+	}
+}
