@@ -454,9 +454,23 @@ public class BST<Key extends Comparable<Key>, Value> {
 		return true;
 	}
 	
-//	public Key next(Key key) {
-//		this.get(key)
-//	}
+	public Key next(Key key) {
+		Node node = get(key, root);
+		if (node == null) {
+			return null;
+		}
+		node = node.next;
+		return node == null ? null : node.key;
+	}
+	
+	public Key prev(Key key) {
+		Node node = get(key, root);
+		if (node == null) {
+			return null;
+		}
+		node = node.prev;
+		return node == null ? null : node.key;
+	}
 	
 	private void updatePrevious(Node node) {
 		Node maxLeft = max(node.left);
