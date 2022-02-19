@@ -18,11 +18,16 @@ public class BST<Key extends Comparable<Key>, Value> {
 		private Node left;
 		private Node right;
 		private int size;
+		
+		private Node prev;
+		private Node next;
 
 		public Node(Key key, Value value, int size) {
 			this.key = key;
 			this.value = value;
 			this.size = size;
+			this.prev = null;
+			this.next = null;
 		}
 		
 		static boolean isBinaryTree(Node n) {
@@ -62,10 +67,10 @@ public class BST<Key extends Comparable<Key>, Value> {
  
 	public Value get(Key key) {
 		Optional<Node> cache = checkCache(key);
-		return cache.isEmpty() ? get(key, root) : cache.get().value;
+		return cache.isEmpty() ? get(key, root).value : cache.get().value;
 	}
 
-	protected Value get(Key key, Node node) {
+	protected Node get(Key key, Node node) {
 		if (node == null) {
 			return null;
 		}
@@ -73,7 +78,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 		int cmp = key.compareTo(node.key);
 		if (cmp == 0) {
 			setCache(node);
-			return node.value;
+			return node;
 		} else if (cmp < 0) {
 			return get(key, node.left);
 		} else {
@@ -102,8 +107,10 @@ public class BST<Key extends Comparable<Key>, Value> {
 			node.value = value;
 		} else if (cmp < 0) {
 			node.left = put(key, value, node.left);
+			updatePrevious(node);
 		} else {
 			node.right = put(key, value, node.right);
+			updateNext(node);
 		}
 
 		node.size = size(node.left) + size(node.right) + 1;
@@ -237,6 +244,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 
 		node.left = deleteMin(node.left);
 		node.size = 1 + size(node.left) + size(node.right);
+		updatePrevious(node);
 		return node;
 	}
 
@@ -254,6 +262,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 
 		node.right = deleteMin(node.right);
 		node.size = 1 + size(node.left) + size(node.right);
+		updateNext(node);
 		return node;
 	}
 
@@ -269,8 +278,10 @@ public class BST<Key extends Comparable<Key>, Value> {
 		int cmp = key.compareTo(node.key);
 		if (cmp < 0) {
 			node.left = delete(key, node.left);
+			updatePrevious(node);
 		} else if (cmp > 0) {
 			node.right = delete(key, node.right);
+			updateNext(node);
 		} else {
 			if (node.left == null) {
 				return node.right;
@@ -441,5 +452,25 @@ public class BST<Key extends Comparable<Key>, Value> {
 			}
 		}
 		return true;
+	}
+	
+//	public Key next(Key key) {
+//		this.get(key)
+//	}
+	
+	private void updatePrevious(Node node) {
+		Node maxLeft = max(node.left);
+		if (maxLeft != null) {
+			maxLeft.next = node;
+		}
+		node.prev = maxLeft;
+	}
+	
+	private void updateNext(Node node) {
+		Node minNext = min(node.right);
+		if (minNext != null) {
+			minNext.prev = node;
+		}
+		node.next = minNext;
 	}
 }
