@@ -516,4 +516,24 @@ public class BST<Key extends Comparable<Key>, Value> {
 		}
 		node.next = minNext;
 	}
+	
+	public void printLevel() {
+		printLevel(root);
+	}
+	
+	private void printLevel(Node node) {
+		Queue<Node> queue = new LinkedList<>();
+		queue.add(node);
+		
+		while (!queue.isEmpty()) {
+			Node n = queue.remove();
+			System.out.print(n.key + " ");
+			if (n.left != null) {
+				queue.add(n.left);
+			}
+			if (n.right != null) {
+				queue.add(n.right);
+			}
+		}
+	}
 }
