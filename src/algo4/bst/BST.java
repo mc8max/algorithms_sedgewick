@@ -10,6 +10,8 @@ import java.util.Stack;
 
 public class BST<Key extends Comparable<Key>, Value> {
 	public static final int RANK_NOT_FOUND = -1;
+	public static final boolean RED = true;
+	public static final boolean BLACK = false;
 
 	private Node root;
 	private Node cache;
@@ -20,37 +22,39 @@ public class BST<Key extends Comparable<Key>, Value> {
 		private Node left;
 		private Node right;
 		private int size;
-		
+		private boolean color;
+
 		private Node prev;
 		private Node next;
 
-		public Node(Key key, Value value, int size) {
+		public Node(Key key, Value value, int size, boolean color) {
 			this.key = key;
 			this.value = value;
 			this.size = size;
+			this.color = color;
 			this.prev = null;
 			this.next = null;
 		}
-		
+
 		static boolean isBinaryTree(Node n) {
 			if (n == null) {
 				return true;
 			}
-			
+
 			int size = 1;
 			if (n.left != null) {
 				size += n.left.size;
 			}
-			
+
 			if (n.right != null) {
 				size += n.right.size;
 			}
-			
+
 			if (n.size != size) {
 				return false;
 			}
-			
-			return isBinaryTree(n.left) && isBinaryTree(n.right); 
+
+			return isBinaryTree(n.left) && isBinaryTree(n.right);
 		}
 	}
 
@@ -61,12 +65,12 @@ public class BST<Key extends Comparable<Key>, Value> {
 	protected int size(Node n) {
 		return n == null ? 0 : n.size;
 	}
-	
+
 	public boolean contains(Key key) {
 		Optional<Node> cache = checkCache(key);
 		return cache.isEmpty() ? (get(key) != null) : true;
 	}
- 
+
 	public Value get(Key key) {
 		Optional<Node> cache = checkCache(key);
 		return cache.isEmpty() ? get(key, root).value : cache.get().value;
@@ -92,15 +96,15 @@ public class BST<Key extends Comparable<Key>, Value> {
 		Optional<Node> cache = checkCache(key);
 		if (cache.isEmpty()) {
 			root = put(key, value, root);
-		}
-		else {
+			root.color = BLACK;
+		} else {
 			cache.get().value = value;
 		}
 	}
 
 	protected Node put(Key key, Value value, Node node) {
 		if (node == null) {
-			return new Node(key, value, 1);
+			return new Node(key, value, 1, RED);
 		}
 
 		int cmp = key.compareTo(node.key);
@@ -115,6 +119,16 @@ public class BST<Key extends Comparable<Key>, Value> {
 			updateNext(node);
 		}
 
+		if (isRed(node.right) && !isRed(node.left)) {
+			node = rotateLeft(node);
+		}
+		if (isRed(node.left) && isRed(node.left.left)) {
+			node = rotateRight(node);
+		}
+		if (isRed(node.left) && isRed(node.right)) {
+			flipColor(node);
+		}
+		
 		node.size = size(node.left) + size(node.right) + 1;
 		return node;
 	}
@@ -305,35 +319,35 @@ public class BST<Key extends Comparable<Key>, Value> {
 		if (node == null) {
 			return;
 		}
-		
+
 		print(node.left);
 		System.out.print(node.key + " ");
 		print(node.right);
 	}
-	
+
 	public Iterable<Key> keys() {
 		return keys(min(), max());
 	}
-	
+
 	public Iterable<Key> keys(Key low, Key high) {
 		Queue<Key> queue = new LinkedList<>();
 		keys(root, queue, low, high);
 		return queue;
 	}
-	
+
 	public Iterable<Key> keysNonRecursive() {
 		if (root == null) {
 			return Collections.emptyList();
 		}
-		
+
 		Stack<Node> stack = new Stack<>();
-		
+
 		Node node = root;
 		while (node != null) {
 			stack.add(node);
 			node = node.left;
 		}
-		
+
 		Queue<Key> queue = new LinkedList<>();
 		while (!stack.isEmpty()) {
 			node = stack.pop();
@@ -344,43 +358,43 @@ public class BST<Key extends Comparable<Key>, Value> {
 				node = node.left;
 			}
 		}
-		
+
 		return queue;
 	}
-	
+
 	private void keys(Node node, Queue<Key> queue, Key low, Key high) {
 		if (node == null) {
 			return;
 		}
-		
+
 		int cmpLow = node.key.compareTo(low);
 		int cmpHigh = node.key.compareTo(high);
-		
+
 		if (cmpLow > 0) {
 			keys(node.left, queue, low, high);
 		}
-		
+
 		if (cmpLow >= 0 && cmpHigh <= 0) {
 			queue.add(node.key);
 		}
-		
+
 		if (cmpHigh < 0) {
 			keys(node.right, queue, low, high);
 		}
 	}
-	
+
 	public int height() {
 		return height(root);
 	}
-	
+
 	private int height(Node node) {
 		if (node == null) {
 			return 0;
 		}
-		
+
 		return 1 + Math.max(height(node.left), height(node.right));
 	}
-	
+
 	public double avgCompares() {
 		int count = avgCompares(root, 0);
 		if (count > 0) {
@@ -388,20 +402,20 @@ public class BST<Key extends Comparable<Key>, Value> {
 		}
 		return count;
 	}
-	
+
 	private int avgCompares(Node node, int compares) {
 		if (node == null) {
 			return 0;
 		}
-		
+
 		compares++;
 		return compares + avgCompares(node.left, compares) + avgCompares(node.right, compares);
 	}
-	
+
 	protected boolean hasCache() {
 		return cache != null;
 	}
-	
+
 	protected Optional<Node> checkCache(Key key) {
 		if (hasCache()) {
 			if (cache.key.equals(key)) {
@@ -411,56 +425,56 @@ public class BST<Key extends Comparable<Key>, Value> {
 		clearCache();
 		return Optional.empty();
 	}
-	
+
 	protected void setCache(Node n) {
 		cache = n;
 	}
-	
+
 	protected void clearCache() {
-		cache  = null;
+		cache = null;
 	}
-	
+
 	public boolean orderCheck() {
 		if (root != null) {
 			return orderCheck(root, min(), max());
 		}
 		return true;
 	}
-	
+
 	private boolean orderCheck(Node node, Key min, Key max) {
 		if (node == null) {
 			return true;
 		}
-		
+
 		int cmpLeft = node.key.compareTo(min);
 		if (cmpLeft < 0) {
 			return false;
 		}
-		
+
 		int cmpRight = node.key.compareTo(max);
 		if (cmpRight > 0) {
 			return false;
 		}
-		
+
 		return orderCheck(node.left, min, max) && orderCheck(node.right, min, max);
 	}
-	
+
 	public boolean hasNoDuplicates() {
 		return hasNoDuplicates(root, new HashSet<Key>());
 	}
-	
+
 	private boolean hasNoDuplicates(Node node, Set<Key> existingKeys) {
 		if (node == null) {
 			return true;
 		}
-		
+
 		if (existingKeys.contains(node.key)) {
 			return false;
 		}
 		existingKeys.add(node.key);
 		return hasNoDuplicates(root.left, existingKeys) && hasNoDuplicates(root.right, existingKeys);
 	}
-	
+
 	public boolean isBST() {
 		if (!hasNoDuplicates()) {
 			return false;
@@ -473,7 +487,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 		}
 		return true;
 	}
-	
+
 	public boolean checks() {
 		for (int rank = 0; rank < size(); rank++) {
 			if (rank != rank(select(rank))) {
@@ -482,7 +496,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 		}
 		return true;
 	}
-	
+
 	public Key next(Key key) {
 		Node node = get(key, root);
 		if (node == null) {
@@ -491,7 +505,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 		node = node.next;
 		return node == null ? null : node.key;
 	}
-	
+
 	public Key prev(Key key) {
 		Node node = get(key, root);
 		if (node == null) {
@@ -500,7 +514,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 		node = node.prev;
 		return node == null ? null : node.key;
 	}
-	
+
 	private void updatePrevious(Node node) {
 		Node maxLeft = max(node.left);
 		if (maxLeft != null) {
@@ -508,7 +522,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 		}
 		node.prev = maxLeft;
 	}
-	
+
 	private void updateNext(Node node) {
 		Node minNext = min(node.right);
 		if (minNext != null) {
@@ -516,15 +530,15 @@ public class BST<Key extends Comparable<Key>, Value> {
 		}
 		node.next = minNext;
 	}
-	
+
 	public void printLevel() {
 		printLevel(root);
 	}
-	
+
 	private void printLevel(Node node) {
 		Queue<Node> queue = new LinkedList<>();
 		queue.add(node);
-		
+
 		while (!queue.isEmpty()) {
 			Node n = queue.remove();
 			System.out.print(n.key + " ");
@@ -535,5 +549,44 @@ public class BST<Key extends Comparable<Key>, Value> {
 				queue.add(n.right);
 			}
 		}
+	}
+
+	private Node rotateLeft(Node h) {
+		Node x = h.right;
+		h.right = x.left;
+		x.left = h;
+		x.color = h.color;
+		h.color = RED;
+		x.size = h.size;
+		h.size = 1 + size(h.left) + size(h.right);
+		return x;
+	}
+	
+	private Node rotateRight(Node h) {
+		Node x = h.left;
+		h.left = x.right;
+		x.right = h;
+		x.color = h.color;
+		h.color = RED;
+		x.size = h.size;
+		h.size = 1 + size(h.left) + size(h.right); 
+		return x;
+	}
+	
+	private void flipColor(Node h) {
+		h.color = RED;
+		if (h.left != null) {
+			h.left.color = BLACK;
+		}
+		if (h.right != null) {
+			h.right.color = BLACK;
+		}
+	}
+
+	private boolean isRed(Node node) {
+		if (node == null) {
+			return false;
+		}
+		return node.color == RED;
 	}
 }
